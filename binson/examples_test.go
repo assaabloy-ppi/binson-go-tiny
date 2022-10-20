@@ -1,3 +1,5 @@
+// Executable code examples, run with ordinary "go test" command.
+// Note, unlike the other tests, these examples are not run with "tinygo test".
 package binson
 
 import "fmt"
@@ -19,11 +21,6 @@ func Example1() {
 	e.Flush()
 
 	var d = NewDecoderFromBytes(b)
-
-	//d.Field("a")
-	//fmt.Println(d.Value)
-	// xxx Output: 123
-
 	d.Field("s")
 	fmt.Println(string(d.Value.([]byte)))
 	// Output: Hello world!
