@@ -14,3 +14,8 @@ STATUS: Work on progress.
 
 
 
+Current work notes
+==================
+
+* Must remove depency on test library for "tinygo test" to work.
+

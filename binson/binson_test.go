@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	//"github.com/stretchr/testify/assert"
 )
 
 func TestEncoderEmptyBinsonObject(t *testing.T) {
@@ -237,7 +238,10 @@ func TestEncoderComplexObjectStructure2(t *testing.T) {
 func TestDecoderObjectEmpty(t *testing.T) {
 	d := NewDecoderFromBytes([]byte("\x40\x41"))
 	gotField := d.NextField()
-	assert.Equal(t, false, gotField)
+
+	if gotField != false {
+		t.Errorf("expected false for gotField")
+	}
 
 	if d.err != nil {
 		t.Errorf("Binson decoder error: %v", d.err)
@@ -249,9 +253,9 @@ func TestDecoder0(t *testing.T) {
 	d := NewDecoderFromBytes([]byte("\x40\x14\x03\x63\x69\x64\x10\x26\x14\x01\x7a\x40\x41\x41"))
 
 	gotField := d.NextField()
-	assert.Equal(t, true, gotField)
+	assertEqualBool(t, true, gotField)
 	assert.Equal(t, Integer, d.ValueType)
-	assert.Equal(t, "cid", string(d.Name))
+	assertEqualString(t, "cid", string(d.Name))
 	assert.Equal(t, int64(38), d.Value)
 
 	gotField = d.NextField()
@@ -468,5 +472,17 @@ func TestDecoderArrayInArray1(t *testing.T) {
 
 	if d.err != nil {
 		t.Errorf("Binson decoder error: %v", d.err)
+	}
+}
+
+func assertEqualBool(t *testing.T, expected bool, actual bool) {
+	if expected != actual {
+		t.Errorf("Expected %v, got %v", expected, actual)
+	}
+}
+
+func assertEqualString(t *testing.T, expected string, actual string) {
+	if expected != actual {
+		t.Errorf("Expected %s, got %s", expected, actual)
 	}
 }
