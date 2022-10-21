@@ -14,8 +14,13 @@ STATUS: Work on progress.
 
 
 
-Current work notes
-==================
+WORK NOTES
+==========
 
-* Must remove depency on test library for "tinygo test" to work.
+* 
+* DONE! Must remove depency on test library for "tinygo test" to work.
 
+
+## VS Code tip
+
+Open Folder "binson" in one VS Code window and "perf" in another window.
