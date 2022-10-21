@@ -60,20 +60,21 @@ const (
 	stateEndOfObject
 )
 
-type ParseError struct {
-	text string
-}
-
-func (e ParseError) Error() string {
-	return e.text
-}
-
-// Use this function to create ParseError structs.
-// Design: more flexible with a function (as indirection) in case we
-// want changes.
-func parseError(text string) ParseError {
-	return ParseError{text}
-}
+// Error codes for err field of Encoder and Decoder
+const ErrorNone = 0                // All ok, no error
+const ErrorEOF = 1                 // Reached EOF (input bffuer ends before Binson object ends)
+const ErrorEndOfObject = 2         // At end of Binson object, cannot parse further
+const ErrorNotReadyToReadField = 3 // Not ready to read a field
+const ErrorUnexpectedTypeByte = 4
+const ErrorNotBeforeArrayValue = 5
+const ErrorNotBeforeObject = 6
+const ErrorNotBeforeArray = 7
+const ErrorCannotGoUpToObject = 8
+const ErrorCannotGoUpToArray = 9
+const ErrorUnexpectedType = 10
+const ErrorNegativeLength = 11
+const ErrorLengthTooLarge = 12
+const ErrorExpectedBegin = 13
 
 // ======== Decoder ========
 
@@ -81,11 +82,10 @@ func parseError(text string) ParseError {
 type Decoder struct {
 	buf     []byte
 	offset  int
-	err     error
 	state   int
-	sigByte byte // temp
+	sigByte byte
+	err     int
 
-	//Name      string
 	Name      []byte
 	Value     interface{}
 	ValueType ValueType
@@ -103,11 +103,11 @@ func NewDecoderFromBytes(buf []byte) *Decoder {
 // in the current Binson object.
 func (d *Decoder) Field(name string) bool {
 	for d.NextField() {
-		if d.err != nil {
+		if d.err != ErrorNone {
 			return false
 		}
 
-		// TODO verify that this does not dynalloc.
+		// This does no heap alloc.
 		if name == string(d.Name) {
 			return true
 		}
@@ -125,12 +125,12 @@ func (d *Decoder) NextField() bool {
 	case stateZero:
 		d.parseBegin()
 	case stateEndOfObject:
-		d.err = parseError("reached end-of-object")
+		d.err = ErrorEndOfObject
 		return false
 	case stateBeforeObject:
 		d.state = stateBeforeField
 		for d.NextField() {
-			if d.err != nil {
+			if d.err != ErrorNone {
 				return false
 			}
 		}
@@ -138,7 +138,7 @@ func (d *Decoder) NextField() bool {
 	case stateBeforeArray:
 		d.state = stateBeforeArrayValue
 		for d.NextArrayValue() {
-			if d.err != nil {
+			if d.err != ErrorNone {
 				return false
 			}
 		}
@@ -146,13 +146,12 @@ func (d *Decoder) NextField() bool {
 	}
 
 	if d.state != stateBeforeField {
-		d.err = parseError("not ready to read a field")
+		d.err = ErrorNotReadyToReadField
 		return false
 	}
 
-	typeBeforeName, err := d.readOne()
-	if err != nil {
-		d.err = parseError("abnormal end of input")
+	typeBeforeName := d.readOne()
+	if d.err != ErrorNone {
 		return false
 	}
 	if typeBeforeName == sigEnd {
@@ -161,9 +160,8 @@ func (d *Decoder) NextField() bool {
 	}
 	d.parseFieldName(typeBeforeName)
 
-	typeBeforeValue, err := d.readOne()
-	if err != nil {
-		d.err = parseError("abnormal end of input")
+	typeBeforeValue := d.readOne()
+	if d.err != ErrorNone {
 		return false
 	}
 	d.parseValue(typeBeforeValue, stateBeforeField)
@@ -179,7 +177,7 @@ func (d *Decoder) NextArrayValue() bool {
 	if d.state == stateBeforeArray {
 		d.state = stateBeforeArrayValue
 		for d.NextArrayValue() {
-			if d.err != nil {
+			if d.err != ErrorNone {
 				return false
 			}
 		}
@@ -189,7 +187,7 @@ func (d *Decoder) NextArrayValue() bool {
 	if d.state == stateBeforeObject {
 		d.state = stateBeforeField
 		for d.NextField() {
-			if d.err != nil {
+			if d.err != ErrorNone {
 				return false
 			}
 		}
@@ -197,13 +195,13 @@ func (d *Decoder) NextArrayValue() bool {
 	}
 
 	if d.state != stateBeforeArrayValue {
-		d.err = parseError("not before array value")
+		//d.err = parseError("not before array value")
+		d.err = ErrorNotBeforeArrayValue
 		return false
 	}
 
-	sig, err := d.readOne()
-	if err != nil {
-		d.err = parseError("abnormal end of input")
+	sig := d.readOne()
+	if d.err != ErrorNone {
 		return false
 	}
 	if sig == sigEndArray {
@@ -218,7 +216,8 @@ func (d *Decoder) NextArrayValue() bool {
 // GoIntoObject navigates decoder inside the expected OBJECT
 func (d *Decoder) GoIntoObject() {
 	if d.state != stateBeforeObject {
-		d.err = parseError("unexpected parser state, not an object field")
+		//d.err = parseError("not an object field") XXX
+		d.err = ErrorNotBeforeObject
 		return
 	}
 	d.state = stateBeforeField
@@ -227,7 +226,8 @@ func (d *Decoder) GoIntoObject() {
 // GoIntoArray navigates decoder inside the expected ARRAY
 func (d *Decoder) GoIntoArray() {
 	if d.state != stateBeforeArray {
-		d.err = parseError("unexpected parser state, not an array field")
+		//d.err = parseError("unexpected parser state, not an array field") // XXX
+		d.err = ErrorNotBeforeArray
 		return
 	}
 	d.state = stateBeforeArrayValue
@@ -237,7 +237,7 @@ func (d *Decoder) GoIntoArray() {
 func (d *Decoder) GoUpToObject() {
 	if d.state == stateBeforeArrayValue {
 		for d.NextArrayValue() {
-			if d.err != nil {
+			if d.err != ErrorNone {
 				return
 			}
 		}
@@ -245,14 +245,15 @@ func (d *Decoder) GoUpToObject() {
 
 	if d.state == stateBeforeField {
 		for d.NextField() {
-			if d.err != nil {
+			if d.err != ErrorNone {
 				return
 			}
 		}
 	}
 
 	if d.state != stateEndOfObject && d.state != stateEndOfArray {
-		d.err = parseError("unexpected parser state")
+		//d.err = parseError("unexpected parser state")
+		d.err = ErrorCannotGoUpToObject
 		return
 	}
 
@@ -263,7 +264,7 @@ func (d *Decoder) GoUpToObject() {
 func (d *Decoder) GoUpToArray() {
 	if d.state == stateBeforeArrayValue {
 		for d.NextArrayValue() {
-			if d.err != nil {
+			if d.err != ErrorNone {
 				return
 			}
 		}
@@ -271,14 +272,15 @@ func (d *Decoder) GoUpToArray() {
 
 	if d.state == stateBeforeField {
 		for d.NextField() {
-			if d.err != nil {
+			if d.err != ErrorNone {
 				return
 			}
 		}
 	}
 
 	if d.state != stateEndOfObject && d.state != stateEndOfArray {
-		d.err = parseError("unexpected parser state")
+		//d.err = parseError("unexpected parser state")
+		d.err = ErrorCannotGoUpToArray
 		return
 	}
 
@@ -303,7 +305,7 @@ func (d *Decoder) parseValue(sigByte byte, afterValueState int) {
 		var d64 float64
 		var i64 int64
 		d.ValueType = Double
-		d.err = d.readInt64(&i64)
+		d.readInt64(&i64)
 		d64 = float64frombits(uint64(i64))
 		d.Value = d64
 		d.state = afterValueState
@@ -320,7 +322,7 @@ func (d *Decoder) parseValue(sigByte byte, afterValueState int) {
 		d.Value = d.parseStringBytes(sigByte)
 		d.state = afterValueState
 	default:
-		d.err = parseError("unexpected type byte")
+		d.err = ErrorUnexpectedTypeByte
 	}
 }
 
@@ -329,15 +331,15 @@ func (d *Decoder) parseFieldName(sigBeforeName byte) {
 	case sigString1, sigString2, sigString4:
 		d.Name = d.parseStringBytes(sigBeforeName)
 	default:
-		d.err = parseError("unexpected type")
+		d.err = ErrorUnexpectedType
 	}
 }
 
 func (d *Decoder) parseBegin() {
-	d.sigByte, d.err = d.readOne()
+	d.sigByte = d.readOne()
 
 	if d.sigByte != sigBegin {
-		d.err = parseError("expected BEGIN")
+		d.err = ErrorExpectedBegin
 		return
 	}
 	d.state = stateBeforeField
@@ -348,12 +350,14 @@ func (d *Decoder) parseStringBytes(sigByte byte) []byte {
 	ln := d.parseInteger(sigByte)
 
 	if ln < 0 {
-		d.err = parseError("negative name/string/bytes length")
+		//d.err = parseError("negative name/string/bytes length")
+		d.err = ErrorNegativeLength
 		return nil
 	}
 
 	if ln >= 2^31 {
-		d.err = parseError("name/string/bytes length too large")
+		//d.err = parseError("name/string/bytes length too large")
+		d.err = ErrorLengthTooLarge
 		return nil
 	}
 
@@ -364,7 +368,8 @@ func (d *Decoder) parseStringBytes(sigByte byte) []byte {
 	intLn := int(ln)
 
 	if d.offset+intLn > len(d.buf) {
-		d.err = parseError("EOF")
+		//d.err = parseError("EOF")
+		d.err = ErrorEOF
 		return nil
 	}
 
@@ -389,83 +394,87 @@ func (d *Decoder) parseInteger(sigByte byte) int64 {
 	switch sigByte & intLengthMask {
 	case oneByte:
 		var i1 int8
-		d.err = d.readInt8(&i1)
+		d.readInt8(&i1)
 		return int64(i1)
 	case twoBytes:
 		var i2 int16
-		d.err = d.readInt16(&i2)
+		d.readInt16(&i2)
 		return int64(i2)
 	case fourBytes:
 		var i4 int32
-		d.err = d.readInt32(&i4)
+		d.readInt32(&i4)
 		return int64(i4)
 	case eightBytes:
 		var i8 int64
-		d.err = d.readInt64(&i8)
+		d.readInt64(&i8)
 		return int64(i8)
 	default:
-		d.err = parseError("never happens")
 		panic("never happens")
 	}
 }
 
 // Reads one byte from the buffer.
-func (d *Decoder) readOne() (byte, error) {
+func (d *Decoder) readOne() byte {
 	if d.offset >= len(d.buf) {
-		return 0, parseError("EOF")
+		d.err = ErrorEOF
+		return 0
 	}
 	b := d.buf[d.offset]
 	d.offset++
-	return b, nil
+	return b
 }
 
-func (d *Decoder) readInt8(a *int8) error {
+func (d *Decoder) readInt8(a *int8) {
 	if d.offset+1 > len(d.buf) {
-		return parseError("EOF")
+		*a = 0
+		d.err = ErrorEOF
+		return
 	}
 	*a = int8(d.buf[d.offset])
 	d.offset++
-	return nil
 }
 
-func (d *Decoder) readInt16(a *int16) error {
+func (d *Decoder) readInt16(a *int16) {
 	if d.offset+2 > len(d.buf) {
-		return parseError("EOF")
+		*a = 0
+		d.err = ErrorEOF
+		return
 	}
 
 	myUint16 := getUint16(d.buf[d.offset:])
 	*a = int16(myUint16)
 	d.offset += 2
-	return nil
 }
 
-func (d *Decoder) readInt32(a *int32) error {
+func (d *Decoder) readInt32(a *int32) {
 	if d.offset+4 > len(d.buf) {
-		return parseError("EOF")
+		*a = 0
+		d.err = ErrorEOF
 	}
 
 	myUint32 := getUint32(d.buf[d.offset:])
 	*a = int32(myUint32)
 	d.offset += 4
-	return nil
 }
 
-func (d *Decoder) readInt64(a *int64) error {
+func (d *Decoder) readInt64(a *int64) {
 	if d.offset+8 > len(d.buf) {
-		return parseError("EOF")
+		d.err = ErrorEOF
+		*a = 0
+		return
 	}
 
 	myUint64 := getUint64(d.buf[d.offset:])
 	*a = int64(myUint64)
 	d.offset += 8
-	return nil
 }
 
-// Buffer copy, there is likely a more efficient way.
-func (d *Decoder) readToBuffer(toBuffer []byte) error {
+func (d *Decoder) readToBuffer(toBuffer []byte) {
 	ln := len(toBuffer)
 	if d.offset+ln > len(d.buf) {
-		return parseError("EOF")
+		//return parseError("EOF")
+		d.err = ErrorEOF
+		return
 	}
 
 	for i := 0; i < ln; i++ {
@@ -473,33 +482,25 @@ func (d *Decoder) readToBuffer(toBuffer []byte) error {
 	}
 
 	d.offset += ln
-	return nil
 }
 
 // ========= Encoder ========
 
 // An Encoder writes binson data to an output stream.
 type Encoder struct {
-	//w      *bufio.Writer
 	err    error
 	buf    []byte // buffer to write output to
 	offset int    // next position in buf to write to
 }
-
-// TODO Remove NewEncoderFromWriter, replace test code calls to use NewEncoderFromBytes.
-// NewEncoderFromWriter returns a new encoder that writes to w, with buffering
-//func NewEncoderFromWriter(w io.Writer) *Encoder {
-//	return &Encoder{w: bufio.NewWriter(w)}
-//}
 
 func NewEncoderFromBytes(buf []byte) *Encoder {
 	return &Encoder{buf: buf}
 }
 
 // Flush encoder buffers
+// Does nothing in this implementation.
+// Keep it if we want same API, binson-go and binson-go-tiny.
 func (e *Encoder) Flush() {
-	//e.w.Flush()
-	// TODO dummy, remove it!
 }
 
 // Begin writes OBJECT begin signature to output stream

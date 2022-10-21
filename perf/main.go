@@ -9,12 +9,14 @@ package main
 
 import "binson"
 
+var buffer = [...]byte{0x40, 0x14, 0x03, 0x63, 0x69, 0x64, 0x10, 0x26, 0x14, 0x01, 0x7a, 0x40, 0x41, 0x41}
+
 func main() {
-	println("Hello from perf/main.go")
+	//println("Hello from perf/main.go")
 
 	// {"cid":38, "z":{}}
-	d := binson.NewDecoderFromBytes([]byte("\x40\x14\x03\x63\x69\x64\x10\x26\x14\x01\x7a\x40\x41\x41"))
+	d := binson.NewDecoderFromBytes(buffer[:])
 
 	d.NextField()
-	println("field: " + string(d.Name))
+	//println("field: " + string(d.Name))
 }

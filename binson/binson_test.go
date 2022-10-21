@@ -240,8 +240,8 @@ func TestDecoderObjectEmpty(t *testing.T) {
 		t.Errorf("expected false for gotField")
 	}
 
-	if d.err != nil {
-		t.Errorf("Binson decoder error: %v", d.err)
+	if d.err != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.err)
 	}
 }
 
@@ -263,8 +263,8 @@ func TestDecoder0(t *testing.T) {
 	gotField = d.NextField()
 	assertEqualBool(t, false, gotField)
 
-	if d.err != nil {
-		t.Errorf("Binson decoder error: %v", d.err)
+	if d.err != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.err)
 	}
 }
 
@@ -288,8 +288,8 @@ func TestDecoderNested1(t *testing.T) {
 	gotField = d.NextField()
 	assertEqualBool(t, false, gotField)
 
-	if d.err != nil {
-		t.Errorf("Binson decoder error: %v", d.err)
+	if d.err != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.err)
 	}
 }
 
@@ -314,8 +314,8 @@ func TestDecoderExample4a(t *testing.T) {
 	assertTrue(t, d.ValueType == Integer, "expected Integer v2")
 	assertEqualInt64(t, int64(4), d.Value.(int64))
 
-	if d.err != nil {
-		t.Errorf("Binson decoder error: %v", d.err)
+	if d.err != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.err)
 	}
 }
 
@@ -340,8 +340,8 @@ func TestDecoderExample4b(t *testing.T) {
 
 	assertEqualBool(t, false, d.NextField())
 
-	if d.err != nil {
-		t.Errorf("Binson decoder error: %v", d.err)
+	if d.err != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.err)
 	}
 }
 
@@ -357,8 +357,8 @@ func TestDecoderExample4c(t *testing.T) {
 	d.Field("d")
 	assertEqualInt64(t, int64(4), d.Value.(int64))
 
-	if d.err != nil {
-		t.Errorf("Binson decoder error: %v", d.err)
+	if d.err != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.err)
 	}
 }
 
@@ -387,8 +387,8 @@ func TestDecoderExampleArray1(t *testing.T) {
 
 	d.GoUpToArray()
 
-	if d.err != nil {
-		t.Errorf("Binson decoder error: %v", d.err)
+	if d.err != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.err)
 	}
 }
 
@@ -404,8 +404,8 @@ func TestDecoderSkipArrayFields(t *testing.T) {
 	assertTrue(t, d.ValueType == Integer, "expected Integer")
 	assertEqualInt64(t, int64(3), d.Value.(int64))
 
-	if d.err != nil {
-		t.Errorf("Binson decoder error: %v", d.err)
+	if d.err != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.err)
 	}
 }
 
@@ -426,8 +426,8 @@ func TestDecoderFieldInTheMiddle1(t *testing.T) {
 	d.Field("c")
 	assertEqualInt64(t, int64(3), d.Value.(int64))
 
-	if d.err != nil {
-		t.Errorf("Binson decoder error: %v", d.err)
+	if d.err != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.err)
 	}
 }
 
@@ -467,8 +467,8 @@ func TestDecoderArrayInArray1(t *testing.T) {
 	assertTrue(t, d.ValueType == Integer, "expected Integer")
 	assertEqualInt64(t, int64(20), d.Value.(int64))
 
-	if d.err != nil {
-		t.Errorf("Binson decoder error: %v", d.err)
+	if d.err != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.err)
 	}
 }
 
