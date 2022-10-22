@@ -1,3 +1,3 @@
-module binson
+module github.com/assaabloy-ppi/binson-go-tiny
 
-go 1.12
+go 1.19
