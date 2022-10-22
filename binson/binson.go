@@ -494,26 +494,21 @@ func (d *Decoder) readToBuffer(toBuffer []byte) {
 
 // An Encoder writes Binson data to an output buffer.
 type Encoder struct {
-	err    error
 	buf    []byte // buffer to write output to
-	offset int    // next position in buf to write to
+	Offset int    // next position in buf to write to
+	Error  int    // error code (ErrorX)
 }
 
 func (e *Encoder) Init(buf []byte) {
 	e.buf = buf
-	e.offset = 0
-	e.err = nil
+	e.Offset = 0
+	e.Error = ErrorNone
 }
 
-func (e *Encoder) Offset() int {
-	return e.offset
-}
-
-// Flush encoder buffers
-// Does nothing in this implementation.
-// Keep it if we want same API, binson-go and binson-go-tiny.
-func (e *Encoder) Flush() {
-}
+// Flush encoder buffers. Does nothing in this implementation.
+// We keep it if we want similar API, binson-go and binson-go-tiny.
+// TODO Consider removing this.
+func (e *Encoder) Flush() {}
 
 // Begin writes OBJECT begin signature to output stream
 func (e *Encoder) Begin() {
@@ -596,8 +591,8 @@ func (e *Encoder) writeIntegerOrLength(baseType byte, val int64) {
 // If not, e.err is set to EOF and false is returned.
 func (e *Encoder) available(s int) bool {
 	// TODO check, should we use len() or capacity?
-	if e.offset+s > len(e.buf) {
-		e.err = writeError("EOF")
+	if e.Offset+s > len(e.buf) {
+		e.Error = ErrorEOF
 		return false
 	}
 	return true
@@ -608,8 +603,8 @@ func (e *Encoder) writeOne(b byte) {
 		return
 	}
 
-	e.buf[e.offset] = b
-	e.offset += 1
+	e.buf[e.Offset] = b
+	e.Offset += 1
 }
 
 func (e *Encoder) write(b []byte) {
@@ -618,9 +613,9 @@ func (e *Encoder) write(b []byte) {
 		return
 	}
 	for i := 0; i < lenb; i++ {
-		e.buf[e.offset+i] = b[i]
+		e.buf[e.Offset+i] = b[i]
 	}
-	e.offset += lenb
+	e.Offset += lenb
 }
 
 func (e *Encoder) writeInt8(i int8) {
@@ -631,24 +626,24 @@ func (e *Encoder) writeInt16(i int16) {
 	if !e.available(2) {
 		return
 	}
-	putUint16(e.buf[e.offset:], uint16(i))
-	e.offset += 2
+	putUint16(e.buf[e.Offset:], uint16(i))
+	e.Offset += 2
 }
 
 func (e *Encoder) writeInt32(i int32) {
 	if !e.available(4) {
 		return
 	}
-	putUint32(e.buf[e.offset:], uint32(i))
-	e.offset += 4
+	putUint32(e.buf[e.Offset:], uint32(i))
+	e.Offset += 4
 }
 
 func (e *Encoder) writeInt64(i int64) {
 	if !e.available(8) {
 		return
 	}
-	putUint64(e.buf[e.offset:], uint64(i))
-	e.offset += 8
+	putUint64(e.buf[e.Offset:], uint64(i))
+	e.Offset += 8
 }
 
 type WriteError struct {

@@ -84,7 +84,7 @@ var bytesTable = []struct {
 func TestTableInts(t *testing.T) {
 	for _, record := range intTable {
 		b := make([]byte, 100)
-		enc := NewEncoderFromBytes(b)
+		enc := newEncoderFromBytes(b)
 
 		// test Encoder
 
@@ -97,7 +97,7 @@ func TestTableInts(t *testing.T) {
 
 		// test Decoder
 		typeBeforeValue := record.raw[0]
-		dec := NewDecoderFromBytes(record.raw[1:])
+		dec := newDecoderFromBytes(record.raw[1:])
 		dec.parseValue(typeBeforeValue, 0)
 
 		if record.val != dec.ValueInteger {
@@ -109,7 +109,7 @@ func TestTableInts(t *testing.T) {
 func TestTableBooleans(t *testing.T) {
 	for _, record := range boolTable {
 		b := make([]byte, 100)
-		enc := NewEncoderFromBytes(b)
+		enc := newEncoderFromBytes(b)
 
 		// test Encoder
 		enc.Bool(record.val)
@@ -123,7 +123,7 @@ func TestTableBooleans(t *testing.T) {
 
 		// test Decoder
 		typeBeforeValue := record.raw[0]
-		dec := NewDecoderFromBytes(record.raw[1:])
+		dec := newDecoderFromBytes(record.raw[1:])
 
 		dec.parseValue(typeBeforeValue, 0)
 
@@ -138,7 +138,7 @@ func TestTableDoubles(t *testing.T) {
 		b := make([]byte, 100)
 
 		// Encoder
-		enc := NewEncoderFromBytes(b)
+		enc := newEncoderFromBytes(b)
 		enc.Double(record.val)
 		enc.Flush()
 		slice := b[:len(record.raw)]
@@ -150,7 +150,7 @@ func TestTableDoubles(t *testing.T) {
 
 		// Decoder
 		typeBeforeValue := record.raw[0]
-		dec := NewDecoderFromBytes(record.raw[1:])
+		dec := newDecoderFromBytes(record.raw[1:])
 
 		dec.parseValue(typeBeforeValue, 0)
 
@@ -163,7 +163,7 @@ func TestTableDoubles(t *testing.T) {
 func TestTableStrings(t *testing.T) {
 	for _, record := range stringTable {
 		b := make([]byte, 100)
-		enc := NewEncoderFromBytes(b)
+		enc := newEncoderFromBytes(b)
 
 		enc.String(record.val)
 		enc.Flush()
@@ -175,7 +175,7 @@ func TestTableStrings(t *testing.T) {
 
 		// test Decoder
 		typeBeforeValue := record.raw[0]
-		dec := NewDecoderFromBytes(record.raw[1:])
+		dec := newDecoderFromBytes(record.raw[1:])
 
 		dec.parseValue(typeBeforeValue, 0)
 
@@ -188,7 +188,7 @@ func TestTableStrings(t *testing.T) {
 func TestTableBytes(t *testing.T) {
 	for _, record := range bytesTable {
 		b := make([]byte, 100)
-		enc := NewEncoderFromBytes(b)
+		enc := newEncoderFromBytes(b)
 		enc.Bytes(record.val)
 		enc.Flush()
 		slice := b[:len(record.raw)]
@@ -200,7 +200,7 @@ func TestTableBytes(t *testing.T) {
 
 		// test Decoder
 		typeBeforeValue := record.raw[0]
-		dec := NewDecoderFromBytes(record.raw[1:])
+		dec := newDecoderFromBytes(record.raw[1:])
 
 		dec.parseValue(typeBeforeValue, 0)
 

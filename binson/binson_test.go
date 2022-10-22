@@ -9,14 +9,14 @@ import (
 func TestEncoderEmptyBinsonObject(t *testing.T) {
 	exp := []byte("\x40\x41") // {}
 	b := make([]byte, 100)
-	e := NewEncoderFromBytes(b)
+	e := newEncoderFromBytes(b)
 
 	e.Begin()
 	e.End()
 	e.Flush()
 
-	if e.offset != 2 {
-		t.Errorf("unexpected e.offset: %d", e.offset)
+	if e.Offset != 2 {
+		t.Errorf("unexpected e.offset: %d", e.Offset)
 		return
 	}
 
@@ -30,7 +30,7 @@ func TestEncoderEmptyBinsonObject(t *testing.T) {
 func TestEncoderEmptyBinsonArray(t *testing.T) {
 	exp := []byte("\x42\x43") // []
 	b := make([]byte, 10)
-	e := NewEncoderFromBytes(b)
+	e := newEncoderFromBytes(b)
 
 	e.BeginArray()
 	e.EndArray()
@@ -44,7 +44,7 @@ func TestEncoderEmptyBinsonArray(t *testing.T) {
 func TestEncoderEmptyBinsonArray2(t *testing.T) {
 	exp := []byte("\x40\x14\x00\x42\x43\x41") // {""=[]}
 	b := make([]byte, 100)
-	e := NewEncoderFromBytes(b)
+	e := newEncoderFromBytes(b)
 
 	e.Begin()
 	e.Name("")
@@ -61,7 +61,7 @@ func TestEncoderEmptyBinsonArray2(t *testing.T) {
 func TestEncoderObjectWithUTF8Name(t *testing.T) {
 	exp := []byte("\x40\x14\x06\xe7\x88\x85\xec\x9b\xa1\x10\x7b\x41") // {"爅웡":123}
 	b := make([]byte, 100)
-	e := NewEncoderFromBytes(b)
+	e := newEncoderFromBytes(b)
 
 	e.Begin()
 	e.Name("爅웡")
@@ -78,7 +78,7 @@ func TestEncoderNestedObjectsWithEmptyKeyNames(t *testing.T) {
 	// {"":{"":{"":{}}}}
 	exp := []byte("\x40\x14\x00\x40\x14\x00\x40\x14\x00\x40\x41\x41\x41\x41")
 	b := make([]byte, 100)
-	e := NewEncoderFromBytes(b)
+	e := newEncoderFromBytes(b)
 
 	e.Begin()
 	e.Name("")
@@ -102,7 +102,7 @@ func TestEncoderNestedArraysAsObjectValue(t *testing.T) {
 	// {"b":[[[]]]}
 	exp := []byte("\x40\x14\x01\x62\x42\x42\x42\x43\x43\x43\x41")
 	b := make([]byte, 100)
-	e := NewEncoderFromBytes(b)
+	e := newEncoderFromBytes(b)
 
 	e.Begin()
 	e.Name("b")
@@ -124,7 +124,7 @@ func TestEncoderNestedStructures1AsObjectValue(t *testing.T) {
 	// {"b":[[],{},[]]}
 	exp := []byte("\x40\x14\x01\x62\x42\x42\x43\x40\x41\x42\x43\x43\x41")
 	b := make([]byte, 100)
-	e := NewEncoderFromBytes(b)
+	e := newEncoderFromBytes(b)
 
 	e.Begin()
 	e.Name("b")
@@ -148,7 +148,7 @@ func TestEncoderNestedStructures2AsObjectValue(t *testing.T) {
 	// {"b":[[{}],[{}]]}
 	exp := []byte("\x40\x14\x01\x62\x42\x42\x40\x41\x43\x42\x40\x41\x43\x43\x41")
 	b := make([]byte, 100)
-	e := NewEncoderFromBytes(b)
+	e := newEncoderFromBytes(b)
 
 	e.Begin()
 	e.Name("b")
@@ -174,7 +174,7 @@ func TestEncoderComplexObjectStructure1(t *testing.T) {
 	// {"abc":{"cba":{}}, "b":{"abc":{}}}
 	exp := []byte("\x40\x14\x03\x61\x62\x63\x40\x14\x03\x63\x62\x61\x40\x41\x41\x14\x01\x62\x40\x14\x03\x61\x62\x63\x40\x41\x41\x41")
 	b := make([]byte, 100)
-	e := NewEncoderFromBytes(b)
+	e := newEncoderFromBytes(b)
 
 	e.Begin()
 	e.Name("abc")
@@ -206,7 +206,7 @@ func TestEncoderComplexObjectStructure2(t *testing.T) {
 			"\xff\x7f\x43\x41",
 	)
 	b := make([]byte, 100)
-	e := NewEncoderFromBytes(b)
+	e := newEncoderFromBytes(b)
 
 	e.Begin()
 	e.Name("b")
@@ -233,7 +233,7 @@ func TestEncoderComplexObjectStructure2(t *testing.T) {
 }
 
 func TestDecoderObjectEmpty(t *testing.T) {
-	d := NewDecoderFromBytes([]byte("\x40\x41"))
+	d := newDecoderFromBytes([]byte("\x40\x41"))
 	gotField := d.NextField()
 
 	if gotField != false {
@@ -247,7 +247,7 @@ func TestDecoderObjectEmpty(t *testing.T) {
 
 func TestDecoder0(t *testing.T) {
 	// {"cid":38, "z":{}}
-	d := NewDecoderFromBytes([]byte("\x40\x14\x03\x63\x69\x64\x10\x26\x14\x01\x7a\x40\x41\x41"))
+	d := newDecoderFromBytes([]byte("\x40\x14\x03\x63\x69\x64\x10\x26\x14\x01\x7a\x40\x41\x41"))
 
 	gotField := d.NextField()
 	assertEqualBool(t, true, gotField)
@@ -270,7 +270,7 @@ func TestDecoder0(t *testing.T) {
 
 func TestDecoderNested1(t *testing.T) {
 	// {"a":{"b":2}}
-	d := NewDecoderFromBytes([]byte("\x40\x14\x01\x61\x40\x14\x01\x62\x10\x02\x41\x41"))
+	d := newDecoderFromBytes([]byte("\x40\x14\x01\x61\x40\x14\x01\x62\x10\x02\x41\x41"))
 
 	gotField := d.NextField()
 	assertEqualBool(t, true, gotField)
@@ -295,7 +295,7 @@ func TestDecoderNested1(t *testing.T) {
 
 func TestDecoderExample4a(t *testing.T) {
 	// {"a":1,"b":{"c":3},"d":4}
-	d := NewDecoderFromBytes([]byte("\x40\x14\x01\x61\x10\x01\x14\x01\x62\x40\x14\x01\x63\x10\x03\x41\x14\x01\x64\x10\x04\x41"))
+	d := newDecoderFromBytes([]byte("\x40\x14\x01\x61\x10\x01\x14\x01\x62\x40\x14\x01\x63\x10\x03\x41\x14\x01\x64\x10\x04\x41"))
 
 	gotField := d.NextField()
 	assertEqualBool(t, true, gotField)
@@ -321,7 +321,7 @@ func TestDecoderExample4a(t *testing.T) {
 
 func TestDecoderExample4b(t *testing.T) {
 	// {"a":1,"b":{"c":3},"d":4}
-	d := NewDecoderFromBytes([]byte("\x40\x14\x01\x61\x10\x01\x14\x01\x62\x40\x14\x01\x63\x10\x03\x41\x14\x01\x64\x10\x04\x41"))
+	d := newDecoderFromBytes([]byte("\x40\x14\x01\x61\x10\x01\x14\x01\x62\x40\x14\x01\x63\x10\x03\x41\x14\x01\x64\x10\x04\x41"))
 
 	gotField := d.NextField()
 	gotField = d.NextField()
@@ -347,7 +347,7 @@ func TestDecoderExample4b(t *testing.T) {
 
 func TestDecoderExample4c(t *testing.T) {
 	// {"a":1,"b":{"c":3},"d":4}
-	d := NewDecoderFromBytes([]byte("\x40\x14\x01\x61\x10\x01\x14\x01\x62\x40\x14\x01\x63\x10\x03\x41\x14\x01\x64\x10\x04\x41"))
+	d := newDecoderFromBytes([]byte("\x40\x14\x01\x61\x10\x01\x14\x01\x62\x40\x14\x01\x63\x10\x03\x41\x14\x01\x64\x10\x04\x41"))
 
 	d.Field("b")
 	d.GoIntoObject()
@@ -364,13 +364,13 @@ func TestDecoderExample4c(t *testing.T) {
 
 func TestDecoderNonExistantField(t *testing.T) {
 	// {"cid":38, "z":{}}
-	d := NewDecoderFromBytes([]byte("\x40\x14\x03\x63\x69\x64\x10\x26\x14\x01\x7a\x40\x41\x41"))
+	d := newDecoderFromBytes([]byte("\x40\x14\x03\x63\x69\x64\x10\x26\x14\x01\x7a\x40\x41\x41"))
 	assertEqualBool(t, false, d.Field("height"))
 }
 
 func TestDecoderExampleArray1(t *testing.T) {
 	// {"a":[1, "hello"]}
-	d := NewDecoderFromBytes([]byte("\x40\x14\x01\x61\x42\x10\x01\x14\x05\x68\x65\x6c\x6c\x6f\x43\x41"))
+	d := newDecoderFromBytes([]byte("\x40\x14\x01\x61\x42\x10\x01\x14\x05\x68\x65\x6c\x6c\x6f\x43\x41"))
 
 	d.Field("a")
 	d.GoIntoArray()
@@ -394,7 +394,7 @@ func TestDecoderExampleArray1(t *testing.T) {
 
 func TestDecoderSkipArrayFields(t *testing.T) {
 	// {"a":1,"b":[10,20],"c":3}
-	d := NewDecoderFromBytes([]byte("\x40\x14\x01\x61\x10\x01\x14\x01\x62\x42\x10\x0a\x10\x14\x43\x14\x01\x63\x10\x03\x41"))
+	d := newDecoderFromBytes([]byte("\x40\x14\x01\x61\x10\x01\x14\x01\x62\x42\x10\x0a\x10\x14\x43\x14\x01\x63\x10\x03\x41"))
 
 	d.Field("a")
 	assertTrue(t, d.ValueType == Integer, "expected Integer")
@@ -411,7 +411,7 @@ func TestDecoderSkipArrayFields(t *testing.T) {
 
 func TestDecoderFieldInTheMiddle1(t *testing.T) {
 	// {"a":1,"b":[10,20],"c":3}
-	d := NewDecoderFromBytes([]byte("\x40\x14\x01\x61\x10\x01\x14\x01\x62\x42\x10\x0a\x10\x14\x43\x14\x01\x63\x10\x03\x41"))
+	d := newDecoderFromBytes([]byte("\x40\x14\x01\x61\x10\x01\x14\x01\x62\x42\x10\x0a\x10\x14\x43\x14\x01\x63\x10\x03\x41"))
 
 	d.Field("b")
 	d.GoIntoArray()
@@ -436,7 +436,7 @@ func TestDecoderArrayInArray1(t *testing.T) {
 	b := []byte(
 		"\x40\x14\x01\x61\x10\x01\x14\x01\x62\x42\x10\x0a\x42" +
 			"\x10\x64\x10\x65\x43\x10\x14\x43\x14\x01\x63\x10\x03\x41")
-	d := NewDecoderFromBytes(b)
+	d := newDecoderFromBytes(b)
 
 	d.Field("b")
 	d.GoIntoArray()
@@ -472,15 +472,15 @@ func TestDecoderArrayInArray1(t *testing.T) {
 	}
 }
 
-// Helper functions
+// Helper functions for tests.
 
-func NewEncoderFromBytes(buf []byte) Encoder {
+func newEncoderFromBytes(buf []byte) Encoder {
 	result := Encoder{}
 	result.Init(buf)
 	return result
 }
 
-func NewDecoderFromBytes(bytes []byte) Decoder {
+func newDecoderFromBytes(bytes []byte) Decoder {
 	result := Decoder{}
 	result.Init(bytes)
 	return result

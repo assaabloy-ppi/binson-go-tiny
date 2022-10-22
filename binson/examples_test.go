@@ -9,9 +9,10 @@ func Example1() {
 	// {"a":123, "s":"Hello world!"}
 	//
 
-	b := make([]byte, 100)
-	e := NewEncoderFromBytes(b)
+	buf := make([]byte, 100)
 
+	e := Encoder{}
+	e.Init(buf)
 	e.Begin()
 	e.Name("a")
 	e.Integer(123)
@@ -21,9 +22,34 @@ func Example1() {
 	e.Flush()
 
 	d := Decoder{}
-	d.Init(b)
+	d.Init(buf)
+	d.Field("a")
 
+	fmt.Println(d.ValueInteger)
+	// Output: 123
+}
+
+func Example2() {
+	//
+	// {"a":123, "s":"Hello world!"}
+	//
+
+	buf := make([]byte, 100)
+
+	e := Encoder{}
+	e.Init(buf)
+	e.Begin()
+	e.Name("a")
+	e.Integer(123)
+	e.Name("s")
+	e.String("Hello world!")
+	e.End()
+	e.Flush()
+
+	d := Decoder{}
+	d.Init(buf)
 	d.Field("s")
+
 	fmt.Println(string(d.ValueBytes))
 	// Output: Hello world!
 }
