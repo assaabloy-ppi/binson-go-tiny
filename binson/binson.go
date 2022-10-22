@@ -132,8 +132,9 @@ func (d *Decoder) Init(buf []byte) {
 	d.Name = nil
 }
 
-// Field parses until an expected field with the given name is found
-// in the current Binson object.
+// Parses until a field with the given name has been parsed.
+// Only fields in the current Binson object are considered
+// (not fields in nested objects).
 func (d *Decoder) Field(name string) bool {
 	for d.NextField() {
 		if d.Error != ErrorNone {
@@ -141,6 +142,7 @@ func (d *Decoder) Field(name string) bool {
 		}
 
 		// This does no heap alloc.
+		// Checked with Mac laptop and TinyGo (-pico target), Frans 2022.
 		if name == string(d.Name) {
 			return true
 		}
@@ -505,11 +507,6 @@ func (e *Encoder) Init(buf []byte) {
 	e.Error = ErrorNone
 }
 
-// Flush encoder buffers. Does nothing in this implementation.
-// We keep it if we want similar API, binson-go and binson-go-tiny.
-// TODO Consider removing this.
-func (e *Encoder) Flush() {}
-
 // Begin writes OBJECT begin signature to output stream
 func (e *Encoder) Begin() {
 	e.writeOne(sigBegin)
@@ -554,7 +551,7 @@ func (e *Encoder) Double(val float64) {
 // String writes string value to output stream
 func (e *Encoder) String(val string) {
 	e.writeIntegerOrLength(sigString1, int64(len(val)))
-	e.write([]byte(val)) // TODO check this!
+	e.write([]byte(val))
 }
 
 // Bytes writes []byte value to output stream
@@ -590,7 +587,6 @@ func (e *Encoder) writeIntegerOrLength(baseType byte, val int64) {
 // Returns true if s bytes can be written to output.
 // If not, e.err is set to EOF and false is returned.
 func (e *Encoder) available(s int) bool {
-	// TODO check, should we use len() or capacity?
 	if e.Offset+s > len(e.buf) {
 		e.Error = ErrorEOF
 		return false
@@ -680,19 +676,18 @@ func float64frombits(b uint64) float64 {
 // Early bounds checks (decreasing indexes) see code in binary package and
 // golang.org/issue/14808. Can improve performance. Check TinyGo performance.
 //
-// TODO: check source, copyright etc.
-// Given 32-bit machine (TinyGo on Cortex M0, for example), can we optimized
+// CONSIDER. Given 32-bit machine (TinyGo on Cortex M0, for example), can we optimize
 // this? On little-ending machines, should be possible to do fast conversions
-// using Unsafe.
+// using Unsafe between uint32 and []byte. Possibly between unit64 and []byte as well.
 
 func getUint64(b []byte) uint64 {
-	_ = b[7] // bounds check hint to compiler; see golang.org/issue/14808
+	_ = b[7] // early bounds check for performance
 	return uint64(b[0]) | uint64(b[1])<<8 | uint64(b[2])<<16 | uint64(b[3])<<24 |
 		uint64(b[4])<<32 | uint64(b[5])<<40 | uint64(b[6])<<48 | uint64(b[7])<<56
 }
 
 func putUint64(b []byte, v uint64) {
-	_ = b[7] // early bounds check to guarantee safety of writes below
+	_ = b[7] // early bounds check
 	b[0] = byte(v)
 	b[1] = byte(v >> 8)
 	b[2] = byte(v >> 16)
@@ -704,12 +699,12 @@ func putUint64(b []byte, v uint64) {
 }
 
 func getUint32(b []byte) uint32 {
-	_ = b[3] // bounds check hint to compiler; see golang.org/issue/14808
+	_ = b[3] // early bounds check see golang.org/issue/14808
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 }
 
 func putUint32(b []byte, v uint32) {
-	_ = b[3] // early bounds check to guarantee safety of writes below
+	_ = b[3] // early bounds check, golang.org/issue/14808
 	b[0] = byte(v)
 	b[1] = byte(v >> 8)
 	b[2] = byte(v >> 16)
@@ -717,7 +712,7 @@ func putUint32(b []byte, v uint32) {
 }
 
 func getUint16(b []byte) uint16 {
-	_ = b[1] // early bounds check; see golang.org/issue/14808
+	_ = b[1] // early bounds check
 	return uint16(b[0]) | uint16(b[1])<<8
 }
 

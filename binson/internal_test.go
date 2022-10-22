@@ -89,7 +89,6 @@ func TestTableInts(t *testing.T) {
 		// test Encoder
 
 		enc.Integer(record.val)
-		enc.Flush()
 		if !bytes.Equal(record.raw, b[:len(record.raw)]) {
 			t.Errorf("Binson int encoder failed: val %v, expected 0x%v != recieved: 0x%v",
 				record.val, hex.EncodeToString(record.raw), hex.EncodeToString(b[:len(record.raw)]))
@@ -113,7 +112,6 @@ func TestTableBooleans(t *testing.T) {
 
 		// test Encoder
 		enc.Bool(record.val)
-		enc.Flush()
 
 		slice := b[:len(record.raw)]
 		if !bytes.Equal(record.raw, slice) {
@@ -140,7 +138,6 @@ func TestTableDoubles(t *testing.T) {
 		// Encoder
 		enc := newEncoderFromBytes(b)
 		enc.Double(record.val)
-		enc.Flush()
 		slice := b[:len(record.raw)]
 
 		if !bytes.Equal(record.raw, slice) && !math.IsNaN(record.val) {
@@ -166,7 +163,6 @@ func TestTableStrings(t *testing.T) {
 		enc := newEncoderFromBytes(b)
 
 		enc.String(record.val)
-		enc.Flush()
 		slice := b[:len(record.raw)]
 		if !bytes.Equal(record.raw, slice) {
 			t.Errorf("Encoder failed: val %v, expected 0x%v != recieved: 0x%v",
@@ -190,7 +186,6 @@ func TestTableBytes(t *testing.T) {
 		b := make([]byte, 100)
 		enc := newEncoderFromBytes(b)
 		enc.Bytes(record.val)
-		enc.Flush()
 		slice := b[:len(record.raw)]
 
 		if !bytes.Equal(record.raw, slice) {

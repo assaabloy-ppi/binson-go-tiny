@@ -13,7 +13,6 @@ func TestEncoderEmptyBinsonObject(t *testing.T) {
 
 	e.Begin()
 	e.End()
-	e.Flush()
 
 	if e.Offset != 2 {
 		t.Errorf("unexpected e.offset: %d", e.Offset)
@@ -34,7 +33,6 @@ func TestEncoderEmptyBinsonArray(t *testing.T) {
 
 	e.BeginArray()
 	e.EndArray()
-	e.Flush()
 
 	if !bytes.Equal(exp, b[:len(exp)]) {
 		t.Errorf("Binson encoder failure: expected 0x%v", hex.EncodeToString(exp))
@@ -51,7 +49,6 @@ func TestEncoderEmptyBinsonArray2(t *testing.T) {
 	e.BeginArray()
 	e.EndArray()
 	e.End()
-	e.Flush()
 
 	if !bytes.Equal(exp, b[:len(exp)]) {
 		t.Errorf("Binson encoder failure: expected 0x%v", hex.EncodeToString(exp))
@@ -67,7 +64,6 @@ func TestEncoderObjectWithUTF8Name(t *testing.T) {
 	e.Name("爅웡")
 	e.Integer(123)
 	e.End()
-	e.Flush()
 
 	if !bytes.Equal(exp, b[:len(exp)]) {
 		t.Errorf("Binson encoder failure: expected 0x%v", hex.EncodeToString(exp))
@@ -91,7 +87,6 @@ func TestEncoderNestedObjectsWithEmptyKeyNames(t *testing.T) {
 	e.End()
 	e.End()
 	e.End()
-	e.Flush()
 
 	if !bytes.Equal(exp, b[:len(exp)]) {
 		t.Errorf("Binson encoder failure: expected 0x%v", hex.EncodeToString(exp))
@@ -113,7 +108,6 @@ func TestEncoderNestedArraysAsObjectValue(t *testing.T) {
 	e.EndArray()
 	e.EndArray()
 	e.End()
-	e.Flush()
 
 	if !bytes.Equal(exp, b[:len(exp)]) {
 		t.Errorf("Binson encoder failure: expected 0x%v", hex.EncodeToString(exp))
@@ -137,7 +131,6 @@ func TestEncoderNestedStructures1AsObjectValue(t *testing.T) {
 	e.EndArray()
 	e.EndArray()
 	e.End()
-	e.Flush()
 
 	if !bytes.Equal(exp, b[:len(exp)]) {
 		t.Errorf("Binson encoder failure: expected 0x%v", hex.EncodeToString(exp))
@@ -163,7 +156,6 @@ func TestEncoderNestedStructures2AsObjectValue(t *testing.T) {
 	e.EndArray()
 	e.EndArray()
 	e.End()
-	e.Flush()
 
 	if !bytes.Equal(exp, b[:len(exp)]) {
 		t.Errorf("Binson encoder failure: expected 0x%v", hex.EncodeToString(exp))
@@ -190,7 +182,6 @@ func TestEncoderComplexObjectStructure1(t *testing.T) {
 	e.End()
 	e.End()
 	e.End()
-	e.Flush()
 
 	if !bytes.Equal(exp, b[:len(exp)]) {
 		t.Errorf("Binson encoder failure: expected 0x%v", hex.EncodeToString(exp))
@@ -225,7 +216,6 @@ func TestEncoderComplexObjectStructure2(t *testing.T) {
 	e.Integer(9223372036854775807)
 	e.EndArray()
 	e.End()
-	e.Flush()
 
 	if !bytes.Equal(exp, b[:len(exp)]) {
 		t.Errorf("Binson encoder failure: expected 0x%v", hex.EncodeToString(exp))

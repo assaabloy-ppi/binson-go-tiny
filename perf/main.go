@@ -8,11 +8,12 @@
 package main
 
 import (
-	"binson"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
+
+	"github.com/assaabloy-ppi/binson-go-tiny/binson"
 )
 
 func main() {

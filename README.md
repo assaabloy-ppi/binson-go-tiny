@@ -17,24 +17,7 @@ STATUS: Work on progress.
 WORK NOTES
 ==========
 
-NEXT STEP. Investigated heap allocs. Got:
-
-    perf$ tinygo run -print-allocs=. main.go 
-    binson.go:318:31: object allocated on the heap: escapes at line 318
-    binson.go:322:31: object allocated on the heap: escapes at line 322
-    binson.go:95:17: object allocated on the heap: escapes at line 95
-    ../task_stack.go:67:15: object allocated on the heap: object size 65536 exceeds maximum stack allocation size 256
-    ../task_stack.go:102:12: object allocated on the heap: escapes at line 104
-
-TO DO: remove string() allocation. Lines 318, 322. Add Decoder function getStringValue() 
-that returns a slice of the string. And: getBytesValue(), also a slice. 
-Add fields: Decoder.valueOffset, valueSize. Set them instead of allocating memory.
-
-
-## Tasks
-
-* DONE! Must remove depency on test library for "tinygo test" to work.
-
+Temporary work notes.
 
 ## VS Code tip
 
