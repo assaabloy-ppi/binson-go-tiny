@@ -10,15 +10,3 @@ This library is a high-performance, low-level library suitable for embedded targ
 and the TinyGo compiler. The dependencies are limited, code size is small, and no dynamic
 memory allocation is required to use the library.
 
-STATUS: Work on progress.
-
-
-
-WORK NOTES
-==========
-
-Temporary work notes.
-
-## VS Code tip
-
-Open Folder "binson" in one VS Code window and "perf" in another window.
