@@ -240,8 +240,8 @@ func TestDecoderObjectEmpty(t *testing.T) {
 		t.Errorf("expected false for gotField")
 	}
 
-	if d.err != ErrorNone {
-		t.Errorf("Binson decoder error: %d", d.err)
+	if d.Error != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.Error)
 	}
 }
 
@@ -253,7 +253,7 @@ func TestDecoder0(t *testing.T) {
 	assertEqualBool(t, true, gotField)
 	assertTrue(t, d.ValueType == Integer, "expected Integer type")
 	assertEqualString(t, "cid", string(d.Name))
-	assertEqualInt64(t, int64(38), d.Value.(int64))
+	assertEqualInt64(t, int64(38), d.ValueInteger)
 
 	gotField = d.NextField()
 	assertEqualBool(t, true, gotField)
@@ -263,8 +263,8 @@ func TestDecoder0(t *testing.T) {
 	gotField = d.NextField()
 	assertEqualBool(t, false, gotField)
 
-	if d.err != ErrorNone {
-		t.Errorf("Binson decoder error: %d", d.err)
+	if d.Error != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.Error)
 	}
 }
 
@@ -282,14 +282,14 @@ func TestDecoderNested1(t *testing.T) {
 	assertEqualBool(t, true, gotField)
 	assertTrue(t, d.ValueType == Integer, "expected Integer")
 	assertEqualString(t, "b", string(d.Name))
-	assertEqualInt64(t, int64(2), d.Value.(int64))
+	assertEqualInt64(t, int64(2), d.ValueInteger)
 	d.GoUpToObject()
 
 	gotField = d.NextField()
 	assertEqualBool(t, false, gotField)
 
-	if d.err != ErrorNone {
-		t.Errorf("Binson decoder error: %d", d.err)
+	if d.Error != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.Error)
 	}
 }
 
@@ -301,7 +301,7 @@ func TestDecoderExample4a(t *testing.T) {
 	assertEqualBool(t, true, gotField)
 	assertEqualString(t, "a", string(d.Name))
 	assertTrue(t, d.ValueType == Integer, "expected Integer")
-	assertEqualInt64(t, int64(1), d.Value.(int64))
+	assertEqualInt64(t, int64(1), d.ValueInteger)
 
 	gotField = d.NextField()
 	assertEqualBool(t, true, gotField)
@@ -312,10 +312,10 @@ func TestDecoderExample4a(t *testing.T) {
 	assertEqualBool(t, true, gotField)
 	assertEqualString(t, "d", string(d.Name))
 	assertTrue(t, d.ValueType == Integer, "expected Integer v2")
-	assertEqualInt64(t, int64(4), d.Value.(int64))
+	assertEqualInt64(t, int64(4), d.ValueInteger)
 
-	if d.err != ErrorNone {
-		t.Errorf("Binson decoder error: %d", d.err)
+	if d.Error != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.Error)
 	}
 }
 
@@ -330,18 +330,18 @@ func TestDecoderExample4b(t *testing.T) {
 	gotField = d.NextField()
 	assertEqualBool(t, true, gotField)
 	assertEqualString(t, "c", string(d.Name))
-	assertEqualInt64(t, int64(3), d.Value.(int64))
+	assertEqualInt64(t, int64(3), d.ValueInteger)
 	d.GoUpToObject()
 
 	gotField = d.NextField()
 	assertEqualBool(t, true, gotField)
 	assertEqualString(t, "d", string(d.Name))
-	assertEqualInt64(t, int64(4), d.Value.(int64))
+	assertEqualInt64(t, int64(4), d.ValueInteger)
 
 	assertEqualBool(t, false, d.NextField())
 
-	if d.err != ErrorNone {
-		t.Errorf("Binson decoder error: %d", d.err)
+	if d.Error != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.Error)
 	}
 }
 
@@ -352,13 +352,13 @@ func TestDecoderExample4c(t *testing.T) {
 	d.Field("b")
 	d.GoIntoObject()
 	d.Field("c")
-	assertEqualInt64(t, int64(3), d.Value.(int64))
+	assertEqualInt64(t, int64(3), d.ValueInteger)
 	d.GoUpToObject()
 	d.Field("d")
-	assertEqualInt64(t, int64(4), d.Value.(int64))
+	assertEqualInt64(t, int64(4), d.ValueInteger)
 
-	if d.err != ErrorNone {
-		t.Errorf("Binson decoder error: %d", d.err)
+	if d.Error != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.Error)
 	}
 }
 
@@ -378,17 +378,17 @@ func TestDecoderExampleArray1(t *testing.T) {
 	gotField := d.NextArrayValue()
 	assertEqualBool(t, true, gotField)
 	assertTrue(t, d.ValueType == Integer, "Integer expected")
-	assertEqualInt64(t, int64(1), d.Value.(int64))
+	assertEqualInt64(t, int64(1), d.ValueInteger)
 
 	gotField = d.NextArrayValue()
 	assertEqualBool(t, true, gotField)
 	assertTrue(t, d.ValueType == String, "String expected")
-	assertEqualString(t, "hello", string(d.BytesValue))
+	assertEqualString(t, "hello", string(d.ValueBytes))
 
 	d.GoUpToArray()
 
-	if d.err != ErrorNone {
-		t.Errorf("Binson decoder error: %d", d.err)
+	if d.Error != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.Error)
 	}
 }
 
@@ -398,14 +398,14 @@ func TestDecoderSkipArrayFields(t *testing.T) {
 
 	d.Field("a")
 	assertTrue(t, d.ValueType == Integer, "expected Integer")
-	assertEqualInt64(t, int64(1), d.Value.(int64))
+	assertEqualInt64(t, int64(1), d.ValueInteger)
 
 	d.Field("c")
 	assertTrue(t, d.ValueType == Integer, "expected Integer")
-	assertEqualInt64(t, int64(3), d.Value.(int64))
+	assertEqualInt64(t, int64(3), d.ValueInteger)
 
-	if d.err != ErrorNone {
-		t.Errorf("Binson decoder error: %d", d.err)
+	if d.Error != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.Error)
 	}
 }
 
@@ -417,17 +417,17 @@ func TestDecoderFieldInTheMiddle1(t *testing.T) {
 	d.GoIntoArray()
 
 	d.NextArrayValue()
-	assertEqualInt64(t, int64(10), d.Value.(int64))
+	assertEqualInt64(t, int64(10), d.ValueInteger)
 
 	d.NextArrayValue()
-	assertEqualInt64(t, int64(20), d.Value.(int64))
+	assertEqualInt64(t, int64(20), d.ValueInteger)
 
 	d.GoUpToObject()
 	d.Field("c")
-	assertEqualInt64(t, int64(3), d.Value.(int64))
+	assertEqualInt64(t, int64(3), d.ValueInteger)
 
-	if d.err != ErrorNone {
-		t.Errorf("Binson decoder error: %d", d.err)
+	if d.Error != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.Error)
 	}
 }
 
@@ -443,7 +443,7 @@ func TestDecoderArrayInArray1(t *testing.T) {
 
 	gotValue := d.NextArrayValue()
 	assertEqualBool(t, true, gotValue)
-	assertEqualInt64(t, int64(10), d.Value.(int64))
+	assertEqualInt64(t, int64(10), d.ValueInteger)
 
 	gotValue = d.NextArrayValue()
 	assertEqualBool(t, true, gotValue)
@@ -453,23 +453,37 @@ func TestDecoderArrayInArray1(t *testing.T) {
 	gotValue = d.NextArrayValue()
 	assertEqualBool(t, true, gotValue)
 	assertTrue(t, d.ValueType == Integer, "expected Integer")
-	assertEqualInt64(t, int64(100), d.Value.(int64))
+	assertEqualInt64(t, int64(100), d.ValueInteger)
 
 	gotValue = d.NextArrayValue()
 	assertEqualBool(t, true, gotValue)
 	assertTrue(t, d.ValueType == Integer, "expected Integer")
-	assertEqualInt64(t, int64(101), d.Value.(int64))
+	assertEqualInt64(t, int64(101), d.ValueInteger)
 
 	d.GoUpToArray()
 
 	gotValue = d.NextArrayValue()
 	assertEqualBool(t, true, gotValue)
 	assertTrue(t, d.ValueType == Integer, "expected Integer")
-	assertEqualInt64(t, int64(20), d.Value.(int64))
+	assertEqualInt64(t, int64(20), d.ValueInteger)
 
-	if d.err != ErrorNone {
-		t.Errorf("Binson decoder error: %d", d.err)
+	if d.Error != ErrorNone {
+		t.Errorf("Binson decoder error: %d", d.Error)
 	}
+}
+
+// Helper functions
+
+func NewEncoderFromBytes(buf []byte) Encoder {
+	result := Encoder{}
+	result.Init(buf)
+	return result
+}
+
+func NewDecoderFromBytes(bytes []byte) Decoder {
+	result := Decoder{}
+	result.Init(bytes)
+	return result
 }
 
 func assertEqualBool(t *testing.T, expected bool, actual bool) {

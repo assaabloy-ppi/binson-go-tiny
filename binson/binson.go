@@ -60,11 +60,15 @@ const (
 	stateEndOfObject
 )
 
-// Error codes for err field of Encoder and Decoder
-const ErrorNone = 0                // All ok, no error
-const ErrorEOF = 1                 // Reached EOF (input bffuer ends before Binson object ends)
-const ErrorEndOfObject = 2         // At end of Binson object, cannot parse further
-const ErrorNotReadyToReadField = 3 // Not ready to read a field
+// WORK NOTE
+// Should a new type be used for the error codes?
+// Like: type ErrorType int.
+
+// Error codes
+const ErrorNone = 0
+const ErrorEOF = 1
+const ErrorEndOfObject = 2
+const ErrorNotReadyToReadField = 3
 const ErrorUnexpectedTypeByte = 4
 const ErrorNotBeforeArrayValue = 5
 const ErrorNotBeforeObject = 6
@@ -79,24 +83,36 @@ const ErrorNameTooLarge = 14
 
 // ======== Decoder ========
 
-// A Decoder represents an Binson parser reading a particular input stream.
+// A Decoder represents a Binson parser reading from an in-memory
+// input buffer.
+// For boolean, integer, and double values, the last read value is
+// available in the ValueBoolean, ValueInteger, and ValueDouble fields.
+// The last parsed field name is available in the Name field.
+// The field ValueBytes contains the last read string or bytes value.
+// Decoder.Name is the name of the last parsed Binson field.
+// Decoder.Error is ErrorNone when parsing is successful. Otherwise, it
+// is set to one of the ErrorX error codes.
+//
+// A Decoder that reads from input buffer buf should be created like this:
+//
+//	d := Decoder{}
+//	d.Init(buf)
+//
+// The Decoder struct can be reused for parsing more Binson objects as
+// long as Init() is called before parsing each object.
 type Decoder struct {
-	buf        []byte
-	offset     int
-	state      int
-	sigByte    byte
-	err        int
-	BytesValue []byte // used for string value and bytes value
-	Name       []byte
-	Value      interface{}
-	ValueType  ValueType
-}
+	buf     []byte // input buffer
+	offset  int    // offset to next byte to reade
+	state   int
+	sigByte byte
 
-// Creates a new Decoder to read from buf.
-func NewDecoderFromBytes(buf []byte) Decoder {
-	result := Decoder{}
-	result.Init(buf)
-	return result
+	Error        int
+	Name         []byte
+	ValueType    ValueType
+	ValueBoolean bool
+	ValueInteger int64
+	ValueDouble  float64
+	ValueBytes   []byte
 }
 
 // Initializes the decoder which prepares it to read from buf.
@@ -105,18 +121,22 @@ func (d *Decoder) Init(buf []byte) {
 	d.buf = buf
 	d.offset = 0
 	d.state = stateZero
-	d.err = ErrorNone
-	d.BytesValue = nil
+	d.sigByte = sigBegin
+	d.Error = ErrorNone
 	d.Name = nil
-	d.Value = nil
 	d.ValueType = Boolean
+	d.ValueBoolean = false
+	d.ValueInteger = 0
+	d.ValueDouble = 0.0
+	d.ValueBytes = nil
+	d.Name = nil
 }
 
 // Field parses until an expected field with the given name is found
 // in the current Binson object.
 func (d *Decoder) Field(name string) bool {
 	for d.NextField() {
-		if d.err != ErrorNone {
+		if d.Error != ErrorNone {
 			return false
 		}
 
@@ -138,12 +158,12 @@ func (d *Decoder) NextField() bool {
 	case stateZero:
 		d.parseBegin()
 	case stateEndOfObject:
-		d.err = ErrorEndOfObject
+		d.Error = ErrorEndOfObject
 		return false
 	case stateBeforeObject:
 		d.state = stateBeforeField
 		for d.NextField() {
-			if d.err != ErrorNone {
+			if d.Error != ErrorNone {
 				return false
 			}
 		}
@@ -151,7 +171,7 @@ func (d *Decoder) NextField() bool {
 	case stateBeforeArray:
 		d.state = stateBeforeArrayValue
 		for d.NextArrayValue() {
-			if d.err != ErrorNone {
+			if d.Error != ErrorNone {
 				return false
 			}
 		}
@@ -159,12 +179,12 @@ func (d *Decoder) NextField() bool {
 	}
 
 	if d.state != stateBeforeField {
-		d.err = ErrorNotReadyToReadField
+		d.Error = ErrorNotReadyToReadField
 		return false
 	}
 
 	typeBeforeName := d.readOne()
-	if d.err != ErrorNone {
+	if d.Error != ErrorNone {
 		return false
 	}
 	if typeBeforeName == sigEnd {
@@ -174,7 +194,7 @@ func (d *Decoder) NextField() bool {
 	d.parseName(typeBeforeName)
 
 	typeBeforeValue := d.readOne()
-	if d.err != ErrorNone {
+	if d.Error != ErrorNone {
 		return false
 	}
 	d.parseValue(typeBeforeValue, stateBeforeField)
@@ -190,7 +210,7 @@ func (d *Decoder) NextArrayValue() bool {
 	if d.state == stateBeforeArray {
 		d.state = stateBeforeArrayValue
 		for d.NextArrayValue() {
-			if d.err != ErrorNone {
+			if d.Error != ErrorNone {
 				return false
 			}
 		}
@@ -200,7 +220,7 @@ func (d *Decoder) NextArrayValue() bool {
 	if d.state == stateBeforeObject {
 		d.state = stateBeforeField
 		for d.NextField() {
-			if d.err != ErrorNone {
+			if d.Error != ErrorNone {
 				return false
 			}
 		}
@@ -208,12 +228,12 @@ func (d *Decoder) NextArrayValue() bool {
 	}
 
 	if d.state != stateBeforeArrayValue {
-		d.err = ErrorNotBeforeArrayValue
+		d.Error = ErrorNotBeforeArrayValue
 		return false
 	}
 
 	sig := d.readOne()
-	if d.err != ErrorNone {
+	if d.Error != ErrorNone {
 		return false
 	}
 	if sig == sigEndArray {
@@ -228,7 +248,7 @@ func (d *Decoder) NextArrayValue() bool {
 // GoIntoObject navigates decoder inside the expected OBJECT
 func (d *Decoder) GoIntoObject() {
 	if d.state != stateBeforeObject {
-		d.err = ErrorNotBeforeObject
+		d.Error = ErrorNotBeforeObject
 		return
 	}
 	d.state = stateBeforeField
@@ -237,7 +257,7 @@ func (d *Decoder) GoIntoObject() {
 // GoIntoArray navigates decoder inside the expected ARRAY
 func (d *Decoder) GoIntoArray() {
 	if d.state != stateBeforeArray {
-		d.err = ErrorNotBeforeArray
+		d.Error = ErrorNotBeforeArray
 		return
 	}
 	d.state = stateBeforeArrayValue
@@ -247,7 +267,7 @@ func (d *Decoder) GoIntoArray() {
 func (d *Decoder) GoUpToObject() {
 	if d.state == stateBeforeArrayValue {
 		for d.NextArrayValue() {
-			if d.err != ErrorNone {
+			if d.Error != ErrorNone {
 				return
 			}
 		}
@@ -255,14 +275,14 @@ func (d *Decoder) GoUpToObject() {
 
 	if d.state == stateBeforeField {
 		for d.NextField() {
-			if d.err != ErrorNone {
+			if d.Error != ErrorNone {
 				return
 			}
 		}
 	}
 
 	if d.state != stateEndOfObject && d.state != stateEndOfArray {
-		d.err = ErrorCannotGoUpToObject
+		d.Error = ErrorCannotGoUpToObject
 		return
 	}
 
@@ -273,7 +293,7 @@ func (d *Decoder) GoUpToObject() {
 func (d *Decoder) GoUpToArray() {
 	if d.state == stateBeforeArrayValue {
 		for d.NextArrayValue() {
-			if d.err != ErrorNone {
+			if d.Error != ErrorNone {
 				return
 			}
 		}
@@ -281,14 +301,14 @@ func (d *Decoder) GoUpToArray() {
 
 	if d.state == stateBeforeField {
 		for d.NextField() {
-			if d.err != ErrorNone {
+			if d.Error != ErrorNone {
 				return
 			}
 		}
 	}
 
 	if d.state != stateEndOfObject && d.state != stateEndOfArray {
-		d.err = ErrorCannotGoUpToArray
+		d.Error = ErrorCannotGoUpToArray
 		return
 	}
 
@@ -307,7 +327,7 @@ func (d *Decoder) parseValue(sigByte byte, afterValueState int) {
 		d.state = stateBeforeArray
 	case sigFalse, sigTrue:
 		d.ValueType = Boolean
-		d.Value = sigByte == sigTrue
+		d.ValueBoolean = sigByte == sigTrue
 		d.state = afterValueState
 	case sigDouble:
 		var d64 float64
@@ -315,22 +335,22 @@ func (d *Decoder) parseValue(sigByte byte, afterValueState int) {
 		d.ValueType = Double
 		d.readInt64(&i64)
 		d64 = float64frombits(uint64(i64))
-		d.Value = d64
+		d.ValueDouble = d64
 		d.state = afterValueState
 	case sigInteger1, sigInteger2, sigInteger4, sigInteger8:
 		d.ValueType = Integer
-		d.Value = d.parseInteger(sigByte)
+		d.ValueInteger = d.parseInteger(sigByte)
 		d.state = afterValueState
 	case sigString1, sigString2, sigString4:
 		d.ValueType = String
-		d.BytesValue = d.parseBytes(sigByte)
+		d.ValueBytes = d.parseBytes(sigByte)
 		d.state = afterValueState
 	case sigBytes1, sigBytes2, sigBytes4:
 		d.ValueType = Bytes
-		d.BytesValue = d.parseBytes(sigByte)
+		d.ValueBytes = d.parseBytes(sigByte)
 		d.state = afterValueState
 	default:
-		d.err = ErrorUnexpectedTypeByte
+		d.Error = ErrorUnexpectedTypeByte
 	}
 }
 
@@ -340,7 +360,7 @@ func (d *Decoder) parseName(sigBeforeName byte) {
 	case sigString1, sigString2, sigString4:
 		d.Name = d.parseBytes(sigBeforeName)
 	default:
-		d.err = ErrorUnexpectedType
+		d.Error = ErrorUnexpectedType
 	}
 }
 
@@ -348,7 +368,7 @@ func (d *Decoder) parseBegin() {
 	d.sigByte = d.readOne()
 
 	if d.sigByte != sigBegin {
-		d.err = ErrorExpectedBegin
+		d.Error = ErrorExpectedBegin
 		return
 	}
 	d.state = stateBeforeField
@@ -358,17 +378,17 @@ func (d *Decoder) parseBegin() {
 func (d *Decoder) parseBytes(sigByte byte) []byte {
 	var length64 int64 = d.parseInteger(sigByte)
 	if length64 < 0 {
-		d.err = ErrorNegativeLength
+		d.Error = ErrorNegativeLength
 		return nil
 	}
 
 	if length64 >= 2^31 {
-		d.err = ErrorLengthTooLarge
+		d.Error = ErrorLengthTooLarge
 		return nil
 	}
 	length := int(length64)
 	if d.offset+length > len(d.buf) {
-		d.err = ErrorEOF
+		d.Error = ErrorEOF
 		return nil
 	}
 	result := d.buf[d.offset : d.offset+length]
@@ -403,7 +423,7 @@ func (d *Decoder) parseInteger(sigByte byte) int64 {
 // Reads one byte from the buffer.
 func (d *Decoder) readOne() byte {
 	if d.offset >= len(d.buf) {
-		d.err = ErrorEOF
+		d.Error = ErrorEOF
 		return 0
 	}
 	b := d.buf[d.offset]
@@ -414,7 +434,7 @@ func (d *Decoder) readOne() byte {
 func (d *Decoder) readInt8(a *int8) {
 	if d.offset+1 > len(d.buf) {
 		*a = 0
-		d.err = ErrorEOF
+		d.Error = ErrorEOF
 		return
 	}
 	*a = int8(d.buf[d.offset])
@@ -424,7 +444,7 @@ func (d *Decoder) readInt8(a *int8) {
 func (d *Decoder) readInt16(a *int16) {
 	if d.offset+2 > len(d.buf) {
 		*a = 0
-		d.err = ErrorEOF
+		d.Error = ErrorEOF
 		return
 	}
 
@@ -436,7 +456,7 @@ func (d *Decoder) readInt16(a *int16) {
 func (d *Decoder) readInt32(a *int32) {
 	if d.offset+4 > len(d.buf) {
 		*a = 0
-		d.err = ErrorEOF
+		d.Error = ErrorEOF
 	}
 
 	myUint32 := getUint32(d.buf[d.offset:])
@@ -446,7 +466,7 @@ func (d *Decoder) readInt32(a *int32) {
 
 func (d *Decoder) readInt64(a *int64) {
 	if d.offset+8 > len(d.buf) {
-		d.err = ErrorEOF
+		d.Error = ErrorEOF
 		*a = 0
 		return
 	}
@@ -459,7 +479,7 @@ func (d *Decoder) readInt64(a *int64) {
 func (d *Decoder) readToBuffer(toBuffer []byte) {
 	ln := len(toBuffer)
 	if d.offset+ln > len(d.buf) {
-		d.err = ErrorEOF
+		d.Error = ErrorEOF
 		return
 	}
 
@@ -472,15 +492,11 @@ func (d *Decoder) readToBuffer(toBuffer []byte) {
 
 // ========= Encoder ========
 
-// An Encoder writes binson data to an output stream.
+// An Encoder writes Binson data to an output buffer.
 type Encoder struct {
 	err    error
 	buf    []byte // buffer to write output to
 	offset int    // next position in buf to write to
-}
-
-func NewEncoderFromBytes(buf []byte) *Encoder {
-	return &Encoder{buf: buf}
 }
 
 func (e *Encoder) Init(buf []byte) {

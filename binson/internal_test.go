@@ -100,8 +100,8 @@ func TestTableInts(t *testing.T) {
 		dec := NewDecoderFromBytes(record.raw[1:])
 		dec.parseValue(typeBeforeValue, 0)
 
-		if record.val != dec.Value {
-			t.Errorf("Binson int decoder failed: expected %v != recieved: %v", record.val, dec.Value)
+		if record.val != dec.ValueInteger {
+			t.Errorf("Binson int decoder failed: expected %v != recieved: %v", record.val, dec.ValueInteger)
 		}
 	}
 }
@@ -127,8 +127,8 @@ func TestTableBooleans(t *testing.T) {
 
 		dec.parseValue(typeBeforeValue, 0)
 
-		if record.val != dec.Value {
-			t.Errorf("Binson boolean decoder failed: expected %v != recieved: %v", record.val, dec.Value)
+		if record.val != dec.ValueBoolean {
+			t.Errorf("Binson boolean decoder failed: expected %v != recieved: %v", record.val, dec.ValueBoolean)
 		}
 	}
 }
@@ -154,8 +154,8 @@ func TestTableDoubles(t *testing.T) {
 
 		dec.parseValue(typeBeforeValue, 0)
 
-		if record.val != dec.Value && !math.IsNaN(record.val) {
-			t.Errorf("Binson double decoder failed: expected %v != recieved: %v", record.val, dec.Value)
+		if record.val != dec.ValueDouble && !math.IsNaN(record.val) {
+			t.Errorf("Binson double decoder failed: expected %v != recieved: %v", record.val, dec.ValueDouble)
 		}
 	}
 }
@@ -165,8 +165,6 @@ func TestTableStrings(t *testing.T) {
 		b := make([]byte, 100)
 		enc := NewEncoderFromBytes(b)
 
-		// test Encoder
-		//enc := NewEncoderFromWriter(&b)
 		enc.String(record.val)
 		enc.Flush()
 		slice := b[:len(record.raw)]
@@ -181,8 +179,8 @@ func TestTableStrings(t *testing.T) {
 
 		dec.parseValue(typeBeforeValue, 0)
 
-		if record.val != string(dec.BytesValue) {
-			t.Errorf("Decoder failed: expected %v != recieved: %v", record.val, dec.Value)
+		if record.val != string(dec.ValueBytes) {
+			t.Errorf("Decoder failed: expected %v != recieved: %v", record.val, dec.ValueBytes)
 		}
 	}
 }
@@ -206,9 +204,9 @@ func TestTableBytes(t *testing.T) {
 
 		dec.parseValue(typeBeforeValue, 0)
 
-		if !bytes.Equal(record.val, dec.BytesValue) {
+		if !bytes.Equal(record.val, dec.ValueBytes) {
 			t.Errorf("Binson bytes decoder failed: expected %v != recieved: %v",
-				hex.EncodeToString(record.val), hex.EncodeToString(dec.Value.([]byte)))
+				hex.EncodeToString(record.val), hex.EncodeToString(dec.ValueBytes))
 		}
 	}
 }

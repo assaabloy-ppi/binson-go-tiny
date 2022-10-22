@@ -20,8 +20,10 @@ func Example1() {
 	e.End()
 	e.Flush()
 
-	var d = NewDecoderFromBytes(b)
+	d := Decoder{}
+	d.Init(b)
+
 	d.Field("s")
-	fmt.Println(string(d.BytesValue))
+	fmt.Println(string(d.ValueBytes))
 	// Output: Hello world!
 }
