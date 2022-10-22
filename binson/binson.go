@@ -5,7 +5,7 @@ import (
 	"unsafe"
 )
 
-// ValueType is type signature for each binson item
+// ValueType is type signature for each Binson item
 type ValueType uint
 
 // Binson item types enumeration
@@ -86,7 +86,7 @@ type Decoder struct {
 	state      int
 	sigByte    byte
 	err        int
-	bytesValue []byte // used for string value and bytes value
+	BytesValue []byte // used for string value and bytes value
 	Name       []byte
 	Value      interface{}
 	ValueType  ValueType
@@ -106,7 +106,7 @@ func (d *Decoder) Init(buf []byte) {
 	d.offset = 0
 	d.state = stateZero
 	d.err = ErrorNone
-	d.bytesValue = nil
+	d.BytesValue = nil
 	d.Name = nil
 	d.Value = nil
 	d.ValueType = Boolean
@@ -185,7 +185,7 @@ func (d *Decoder) NextField() bool {
 // NextArrayValue reads next binson ARRAY value,
 // returns true if a field was found and false, if end-of-object was reached.
 // If boolean/integer/double/bytes/string was found, the value is also read
-// and is available in `Value` field
+// and is available in the Value or BytesValue (bytes or string value) field.
 func (d *Decoder) NextArrayValue() bool {
 	if d.state == stateBeforeArray {
 		d.state = stateBeforeArrayValue
@@ -237,7 +237,6 @@ func (d *Decoder) GoIntoObject() {
 // GoIntoArray navigates decoder inside the expected ARRAY
 func (d *Decoder) GoIntoArray() {
 	if d.state != stateBeforeArray {
-		//d.err = parseError("unexpected parser state, not an array field") // XXX
 		d.err = ErrorNotBeforeArray
 		return
 	}
@@ -324,13 +323,11 @@ func (d *Decoder) parseValue(sigByte byte, afterValueState int) {
 		d.state = afterValueState
 	case sigString1, sigString2, sigString4:
 		d.ValueType = String
-		//d.Value = d.parseBytes(sigByte)
-		d.bytesValue = d.parseBytes(sigByte)
+		d.BytesValue = d.parseBytes(sigByte)
 		d.state = afterValueState
 	case sigBytes1, sigBytes2, sigBytes4:
 		d.ValueType = Bytes
-		//d.Value = d.parseBytes(sigByte)
-		d.bytesValue = d.parseBytes(sigByte)
+		d.BytesValue = d.parseBytes(sigByte)
 		d.state = afterValueState
 	default:
 		d.err = ErrorUnexpectedTypeByte
@@ -462,7 +459,6 @@ func (d *Decoder) readInt64(a *int64) {
 func (d *Decoder) readToBuffer(toBuffer []byte) {
 	ln := len(toBuffer)
 	if d.offset+ln > len(d.buf) {
-		//return parseError("EOF")
 		d.err = ErrorEOF
 		return
 	}
@@ -485,6 +481,16 @@ type Encoder struct {
 
 func NewEncoderFromBytes(buf []byte) *Encoder {
 	return &Encoder{buf: buf}
+}
+
+func (e *Encoder) Init(buf []byte) {
+	e.buf = buf
+	e.offset = 0
+	e.err = nil
+}
+
+func (e *Encoder) Offset() int {
+	return e.offset
 }
 
 // Flush encoder buffers

@@ -383,7 +383,7 @@ func TestDecoderExampleArray1(t *testing.T) {
 	gotField = d.NextArrayValue()
 	assertEqualBool(t, true, gotField)
 	assertTrue(t, d.ValueType == String, "String expected")
-	assertEqualString(t, "hello", string(d.bytesValue))
+	assertEqualString(t, "hello", string(d.BytesValue))
 
 	d.GoUpToArray()
 

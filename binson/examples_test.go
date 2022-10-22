@@ -22,6 +22,6 @@ func Example1() {
 
 	var d = NewDecoderFromBytes(b)
 	d.Field("s")
-	fmt.Println(string(d.bytesValue))
+	fmt.Println(string(d.BytesValue))
 	// Output: Hello world!
 }

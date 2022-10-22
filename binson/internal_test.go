@@ -181,7 +181,7 @@ func TestTableStrings(t *testing.T) {
 
 		dec.parseValue(typeBeforeValue, 0)
 
-		if record.val != string(dec.bytesValue) {
+		if record.val != string(dec.BytesValue) {
 			t.Errorf("Decoder failed: expected %v != recieved: %v", record.val, dec.Value)
 		}
 	}
@@ -206,7 +206,7 @@ func TestTableBytes(t *testing.T) {
 
 		dec.parseValue(typeBeforeValue, 0)
 
-		if !bytes.Equal(record.val, dec.bytesValue) {
+		if !bytes.Equal(record.val, dec.BytesValue) {
 			t.Errorf("Binson bytes decoder failed: expected %v != recieved: %v",
 				hex.EncodeToString(record.val), hex.EncodeToString(dec.Value.([]byte)))
 		}
