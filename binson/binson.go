@@ -75,28 +75,41 @@ const ErrorUnexpectedType = 10
 const ErrorNegativeLength = 11
 const ErrorLengthTooLarge = 12
 const ErrorExpectedBegin = 13
+const ErrorNameTooLarge = 14
 
 // ======== Decoder ========
 
 // A Decoder represents an Binson parser reading a particular input stream.
 type Decoder struct {
-	buf     []byte
-	offset  int
-	state   int
-	sigByte byte
-	err     int
-
-	Name      []byte
-	Value     interface{}
-	ValueType ValueType
+	buf        []byte
+	offset     int
+	state      int
+	sigByte    byte
+	err        int
+	bytesValue []byte // used for string value and bytes value
+	Name       []byte
+	Value      interface{}
+	ValueType  ValueType
 }
 
-func NewDecoderFromBytes(buf []byte) *Decoder {
-	return &Decoder{
-		state:  stateZero,
-		buf:    buf,
-		offset: 0,
-	}
+// Creates a new Decoder to read from buf.
+func NewDecoderFromBytes(buf []byte) Decoder {
+	result := Decoder{}
+	result.Init(buf)
+	return result
+}
+
+// Initializes the decoder which prepares it to read from buf.
+// To save mem allocs, a Decoder can be reused.
+func (d *Decoder) Init(buf []byte) {
+	d.buf = buf
+	d.offset = 0
+	d.state = stateZero
+	d.err = ErrorNone
+	d.bytesValue = nil
+	d.Name = nil
+	d.Value = nil
+	d.ValueType = Boolean
 }
 
 // Field parses until an expected field with the given name is found
@@ -158,7 +171,7 @@ func (d *Decoder) NextField() bool {
 		d.state = stateEndOfObject
 		return false
 	}
-	d.parseFieldName(typeBeforeName)
+	d.parseName(typeBeforeName)
 
 	typeBeforeValue := d.readOne()
 	if d.err != ErrorNone {
@@ -195,7 +208,6 @@ func (d *Decoder) NextArrayValue() bool {
 	}
 
 	if d.state != stateBeforeArrayValue {
-		//d.err = parseError("not before array value")
 		d.err = ErrorNotBeforeArrayValue
 		return false
 	}
@@ -216,7 +228,6 @@ func (d *Decoder) NextArrayValue() bool {
 // GoIntoObject navigates decoder inside the expected OBJECT
 func (d *Decoder) GoIntoObject() {
 	if d.state != stateBeforeObject {
-		//d.err = parseError("not an object field") XXX
 		d.err = ErrorNotBeforeObject
 		return
 	}
@@ -252,7 +263,6 @@ func (d *Decoder) GoUpToObject() {
 	}
 
 	if d.state != stateEndOfObject && d.state != stateEndOfArray {
-		//d.err = parseError("unexpected parser state")
 		d.err = ErrorCannotGoUpToObject
 		return
 	}
@@ -279,7 +289,6 @@ func (d *Decoder) GoUpToArray() {
 	}
 
 	if d.state != stateEndOfObject && d.state != stateEndOfArray {
-		//d.err = parseError("unexpected parser state")
 		d.err = ErrorCannotGoUpToArray
 		return
 	}
@@ -315,21 +324,24 @@ func (d *Decoder) parseValue(sigByte byte, afterValueState int) {
 		d.state = afterValueState
 	case sigString1, sigString2, sigString4:
 		d.ValueType = String
-		d.Value = d.parseStringBytes(sigByte)
+		//d.Value = d.parseBytes(sigByte)
+		d.bytesValue = d.parseBytes(sigByte)
 		d.state = afterValueState
 	case sigBytes1, sigBytes2, sigBytes4:
 		d.ValueType = Bytes
-		d.Value = d.parseStringBytes(sigByte)
+		//d.Value = d.parseBytes(sigByte)
+		d.bytesValue = d.parseBytes(sigByte)
 		d.state = afterValueState
 	default:
 		d.err = ErrorUnexpectedTypeByte
 	}
 }
 
-func (d *Decoder) parseFieldName(sigBeforeName byte) {
+// Parses the name of a field.
+func (d *Decoder) parseName(sigBeforeName byte) {
 	switch sigBeforeName {
 	case sigString1, sigString2, sigString4:
-		d.Name = d.parseStringBytes(sigBeforeName)
+		d.Name = d.parseBytes(sigBeforeName)
 	default:
 		d.err = ErrorUnexpectedType
 	}
@@ -345,49 +357,27 @@ func (d *Decoder) parseBegin() {
 	d.state = stateBeforeField
 }
 
-// Parses name or string or bytes.
-func (d *Decoder) parseStringBytes(sigByte byte) []byte {
-	ln := d.parseInteger(sigByte)
-
-	if ln < 0 {
-		//d.err = parseError("negative name/string/bytes length")
+// Parses one of: field name bytes, string value, bytes value.
+func (d *Decoder) parseBytes(sigByte byte) []byte {
+	var length64 int64 = d.parseInteger(sigByte)
+	if length64 < 0 {
 		d.err = ErrorNegativeLength
 		return nil
 	}
 
-	if ln >= 2^31 {
-		//d.err = parseError("name/string/bytes length too large")
+	if length64 >= 2^31 {
 		d.err = ErrorLengthTooLarge
 		return nil
 	}
-
-	// TODO: check if length exceeds total length of buffer
-	// Note, should there be an expected max length? That may be shorter
-	// then the total size of the buffer.
-
-	intLn := int(ln)
-
-	if d.offset+intLn > len(d.buf) {
-		//d.err = parseError("EOF")
+	length := int(length64)
+	if d.offset+length > len(d.buf) {
 		d.err = ErrorEOF
 		return nil
 	}
-
-	result := d.buf[d.offset : d.offset+intLn]
-	d.offset += intLn
-
-	//var buf = make([]byte, ln) // TODO remove dynalloc
-	//err := d.readToBuffer(buf)
-	//if err != nil {
-	//		return nil
-	//}
+	result := d.buf[d.offset : d.offset+length]
+	d.offset += length
 
 	return result
-
-	//if sigByte >= sigBytes1 {
-	//	return buf
-	//}
-	//return string(buf)
 }
 
 func (d *Decoder) parseInteger(sigByte byte) int64 {

@@ -18,5 +18,5 @@ func main() {
 	d := binson.NewDecoderFromBytes(buffer[:])
 
 	d.NextField()
-	//println("field: " + string(d.Name))
+	println("field: " + string(d.Name))
 }
